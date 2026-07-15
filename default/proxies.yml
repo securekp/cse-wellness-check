@@ -1,0 +1,35 @@
+# External API declaration. Declare domains your app needs to reach.
+# At install time, admins see exactly which endpoints the app will use.
+
+# Cribl release feed — used by the "latest version" check to compare the
+# deployment version against the current GA release. Read-only, no auth.
+cdn.cribl.io:
+  paths:
+    allowlist:
+      - /dl/latest-version
+  timeout: 10000
+
+# api.example.com:
+#   paths:
+#     allowlist:
+#       - /v1/
+#       - /api/public/
+#     blocklist:
+#       - /v1/internal/
+#       - /api/admin/
+#   headers:
+#     inject:
+#       Authorization: '`Bearer ${kv.api_key}`'
+#       X-API-Version: '2024-01'
+#     allowlist:
+#       - Content-Type
+#       - x-request-id
+#       - x-*
+#     blocklist:
+#       - X-Sensitive-Header
+#       - Cookie
+#   timeout: 30000
+#   # Verify the upstream TLS certificate chain. Leave as `true` for production
+#   # endpoints. Set to `false` only when targeting trusted internal endpoints
+#   # that present self-signed or otherwise untrusted certificates.
+#   rejectUnauthorized: true
