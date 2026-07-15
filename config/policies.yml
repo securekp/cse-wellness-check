@@ -1,0 +1,69 @@
+# Product API access declaration. Declare Cribl product API paths this app needs.
+# At install time, admins see exactly which platform resources the app will use.
+# All checks are read-only (GET).
+policies:
+  # Worker groups (list + individual, for the group selector and scoping).
+  - object: '/master/groups'
+    actions: ['GET']
+  - object: '/master/groups/*'
+    actions: ['GET']
+  - object: '/master/workers'
+    actions: ['GET']
+  - object: '/master/summary'
+    actions: ['GET']
+  # Leader / workspace reachability.
+  - object: '/health'
+    actions: ['GET']
+
+  # Group-scoped configuration and status (read via the /m/:gid prefix).
+  - object: '/m/:gid/system/inputs'
+    actions: ['GET']
+  - object: '/m/:gid/system/outputs'
+    actions: ['GET']
+  - object: '/m/:gid/system/status/inputs'
+    actions: ['GET']
+  - object: '/m/:gid/system/status/outputs'
+    actions: ['GET']
+  - object: '/m/:gid/system/status'
+    actions: ['GET']
+  - object: '/m/:gid/system/metrics/query'
+    actions: ['POST']
+  - object: '/m/:gid/routes'
+    actions: ['GET']
+  - object: '/m/:gid/pipelines'
+    actions: ['GET']
+  - object: '/m/:gid/packs'
+    actions: ['GET']
+  - object: '/m/:gid/p/*'
+    actions: ['GET']
+  - object: '/m/:gid/system/lookups'
+    actions: ['GET']
+  - object: '/m/:gid/notifications'
+    actions: ['GET']
+  - object: '/m/:gid/system/settings'
+    actions: ['GET']
+
+  # Cribl Search — datasets and datatypes. All /search/* calls are scoped to
+  # the default_search group per the platform guide, so declare both the
+  # group-scoped and system-equivalent paths.
+  - object: '/m/default_search/search/datasets'
+    actions: ['GET']
+  - object: '/m/default_search/search/datatypes'
+    actions: ['GET']
+  - object: '/search/datasets'
+    actions: ['GET']
+  - object: '/search/datatypes'
+    actions: ['GET']
+
+  # System-wide reads (Leader version/build, settings, notifications).
+  # Worker Node versions, connection state, and disk come from /master/workers
+  # (declared above).
+  - object: '/system/info'
+    actions: ['GET']
+  - object: '/system/settings'
+    actions: ['GET']
+  - object: '/notifications'
+    actions: ['GET']
+  # Cribl Insights alert Monitors.
+  - object: '/alert/monitors'
+    actions: ['GET']
