@@ -23,7 +23,6 @@ import {
   evalPqDropOnBackpressure,
   evalResourceUtilization,
   evalRoutingEfficiency,
-  evalSearchAcceleration,
   evalSearchDatatypes,
   evalSearchPartitioning,
   evalSourcesHealthy,
@@ -115,7 +114,8 @@ export const CHECKS: Check[] = [
       '1. Navigate to Data > Sources or Destinations.\n' +
       '2. Inspect each endpoint for TLS/SSL settings (enable TLS, certificates, keys).\n' +
       '3. Ensure TLS is enabled and certificate/key material is present.\n\n' +
-      'NOTE: For Cribl-managed Cribl.Cloud Worker/Edge Nodes, ensure TLS is either disabled or enabled on BOTH the Cribl TCP Destination and the Cribl TCP Source. On Cribl.Cloud, the Cribl TCP Source ships with TLS enabled by default.',
+      'NOTE: For Cribl-managed Cribl.Cloud Worker/Edge Nodes, ensure TLS is either disabled or enabled on BOTH the Cribl TCP Destination and the Cribl TCP Source. On Cribl.Cloud, the Cribl TCP Source ships with TLS enabled by default.\n\n' +
+      'SCOPE: This auto-check evaluates all network sources plus raw-socket destinations (syslog, tcp, tcpjson, splunk S2S, splunk_lb, cribl_tcp), where the TLS toggle governs wire encryption. URL/HTTP/SDK destinations such as Splunk HEC, Cribl HTTP, Elastic, Kafka, and Kinesis are excluded: their transport encryption is set by the endpoint URL scheme (https://), and their TLS settings are client-side cert-validation options rather than a security-required control.',
     description:
       'Configuring TLS in Cribl Stream matters for:\n\n' +
       '- Data Encryption: protects data in transit from interception.\n' +
@@ -358,19 +358,6 @@ export const CHECKS: Check[] = [
       'Cribl is gradually replacing the older v1 Datatypes with the more efficient v2 Datatypes. v2 works across all Cribl Search Sources (including high-speed lakehouse engines) rather than federated providers only, supports Auto-Datatyping so data is parsed automatically, and covers modern formats (JSON Newline Delimited, JSON Array, Parquet, XML, Delimited Text, Key-Value, Raw Text). Prefer v2 for new datatypes and migrate existing v1 Datatypes to v2 where possible.',
     docsUrls: ['https://docs.cribl.io/search/datatypes/', 'https://docs.cribl.io/search/datatypes-v2'],
     evaluator: evalDatatypeVersion,
-  },
-  {
-    id: 'CSE-SEARCH-004',
-    category: 'Search',
-    mode: 'auto',
-    question: 'Is acceleration enabled on frequently searched (federated object-store) datasets?',
-    howTo:
-      'Evaluated automatically: each federated (S3, GCS, Azure Blob, Amazon Security Lake) dataset’s acceleration setting is read from the API. In Cribl Search, open Data > Datasets, edit a dataset, and enable Acceleration (Dataset Acceleration) for datasets you search often.',
-    description:
-      'Dataset Acceleration backfills and periodically refreshes a dataset’s statistics so Cribl Search can prune to the objects a query actually needs instead of listing and scanning the whole bucket on every run. On federated object-store datasets — which otherwise pay a full-bucket scan per query — enabling acceleration on the datasets you search frequently substantially cuts query latency and object-store request/egress cost.\n\n' +
-      'Acceleration has a cost/benefit tradeoff (it consumes credits to maintain the statistics), so enable it on frequently searched datasets rather than blanket-enabling it. Native/lakehouse datasets are already fast and don’t expose this control. Complements CSE-SEARCH-002 (partitioning), which determines how effectively acceleration can prune.',
-    docsUrls: ['https://docs.cribl.io/search/datasets/'],
-    evaluator: evalSearchAcceleration,
   },
 ];
 

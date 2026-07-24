@@ -39,8 +39,7 @@ The 26 checks span four categories:
   route, default destination overlap, lookup sizes, aggregation/suppress
   windows, routing & pipeline efficiency.
 - **Search** — federated datasets have datatypes (event breaking & field
-  extraction), object-store datasets have partitioning configured, and
-  acceleration enabled on frequently searched datasets.
+  extraction) and object-store datasets have partitioning configured.
 
 Check definitions live in [src/checks/catalog.ts](src/checks/catalog.ts);
 auto-evaluators in [src/checks/evaluate.ts](src/checks/evaluate.ts).

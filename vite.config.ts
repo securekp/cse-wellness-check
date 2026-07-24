@@ -90,6 +90,19 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    // The bundle is dominated by vendor code (React, react-router, and the
+    // Capra component library), all needed on first render of this single-view
+    // app — there are no routes to lazy-load. Split vendor into its own chunk
+    // so it caches independently of app code across releases, and lift the
+    // size warning above the vendor chunk's inherent (~700 kB) footprint.
+    chunkSizeWarningLimit: 1000,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [{ name: 'vendor', test: /[\\/]node_modules[\\/]/ }],
+        },
+      },
+    },
   }
 })
 

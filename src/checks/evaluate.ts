@@ -39,6 +39,25 @@ const NETWORK_TYPES = new Set([
   'kinesis',
 ]);
 
+// Destination types where `tls.disabled` actually toggles wire encryption —
+// raw-socket senders with no URL. For these, TLS off means plaintext on the
+// wire, so it's a genuine security finding.
+//
+// URL/HTTP/SDK destinations (splunk_hec, cribl_http, elastic, kafka, kinesis,
+// http, webhook, …) are deliberately EXCLUDED: their transport encryption is
+// governed by the endpoint scheme (https://), and their `tls` block only tunes
+// CLIENT-SIDE cert validation (rejectUnauthorized, servername, client certs).
+// Toggling it is a connectivity/trust choice, not a security-required control,
+// so we don't flag it here.
+const TLS_ENFORCED_DEST_TYPES = new Set([
+  'syslog',
+  'tcp',
+  'tcpjson',
+  'splunk',
+  'splunk_lb',
+  'cribl_tcp',
+]);
+
 // Push sources that benefit from Persistent Queues.
 const PQ_SOURCE_TYPES = new Set([
   'syslog',
@@ -318,21 +337,29 @@ export function evalDefaultGroup(ctx: DeploymentContext): CheckResult {
 
 // CSE-DEPLOY-005: TLS configured on network sources & destinations.
 export function evalTls(ctx: DeploymentContext): CheckResult {
+  // Sources: Cribl is the server terminating the connection, so TLS is
+  // server-side and security-relevant for every network source type.
   const netInputs = ctx.inputs.filter((i) => NETWORK_TYPES.has(i.type) && !i.disabled);
-  const netOutputs = ctx.outputs.filter((o) => NETWORK_TYPES.has(o.type) && !o.disabled);
+  // Destinations: only raw-socket senders enforce wire encryption via `tls`.
+  // URL/HTTP/SDK destinations (e.g. Splunk HEC) use client-side-only TLS driven
+  // by the endpoint scheme, so we skip them — see TLS_ENFORCED_DEST_TYPES.
+  const netOutputs = ctx.outputs.filter((o) => TLS_ENFORCED_DEST_TYPES.has(o.type) && !o.disabled);
   const offenders: string[] = [];
   for (const i of netInputs) {
-    if (i.tls?.disabled === true || (!i.tls && i.type !== 'http')) {
-      if (i.tls?.disabled === true) offenders.push(`source: ${i.id} (${i.type})`);
-    }
+    if (i.tls?.disabled === true) offenders.push(`source: ${i.id} (${i.type})`);
   }
   for (const o of netOutputs) {
     if (o.tls?.disabled === true) offenders.push(`destination: ${o.id} (${o.type})`);
   }
   const total = netInputs.length + netOutputs.length;
-  if (total === 0) return manual('No enabled network sources/destinations found to evaluate for TLS.');
+  if (total === 0) {
+    return manual('No enabled network sources/destinations found to evaluate for TLS.');
+  }
   if (offenders.length === 0) {
-    return pass(`All ${total} enabled network endpoints have TLS enabled (or defer to Cloud defaults).`);
+    return pass(
+      `All ${total} enabled network endpoints have TLS enabled (or defer to Cloud defaults). ` +
+        'Client-side-only TLS destinations (e.g. Splunk HEC) are excluded — their encryption is set by the endpoint URL scheme.',
+    );
   }
   return warn(
     `${offenders.length} of ${total} network endpoints have TLS explicitly disabled.`,
@@ -952,33 +979,6 @@ export function evalSearchPartitioning(ctx: DeploymentContext): CheckResult {
 // entire stock library.
 function isV2Datatype(d: SearchDatatype): boolean {
   return typeof d.searchVersion === 'string' && d.searchVersion.trim().toLowerCase() === 'v2';
-}
-
-// CSE-SEARCH-004: Acceleration enabled on federated (object-store) datasets.
-// Acceleration backfills and refreshes dataset statistics so repeated searches
-// prune objects and return faster; on federated object-store datasets (which
-// otherwise list/scan the bucket on every query) it has the biggest payoff.
-// Native/lakehouse datasets are already fast and don't expose this control, so
-// only federated object-store datasets are evaluated. This is a recommendation
-// (warn), not a hard failure — acceleration is a cost/benefit tradeoff and is
-// most valuable on frequently searched datasets.
-export function evalSearchAcceleration(ctx: DeploymentContext): CheckResult {
-  const federated = ctx.datasets.filter((d) => OBJECT_STORE_DATASET_TYPES.has(d.type));
-  if (federated.length === 0) {
-    return ctx.datasets.length === 0
-      ? manual('No Search datasets were returned by the API.')
-      : na('No federated (object-store) datasets found — acceleration not applicable.');
-  }
-  const unaccelerated = federated
-    .filter((d) => d.metadata?.enableAcceleration !== true)
-    .map((d) => `${d.id} (${d.type})`);
-  if (unaccelerated.length === 0) {
-    return pass(`All ${federated.length} federated dataset(s) have acceleration enabled.`);
-  }
-  return warn(
-    `${unaccelerated.length} of ${federated.length} federated dataset(s) do not have acceleration enabled — enable it on frequently searched datasets so repeated queries prune objects and run faster.`,
-    unaccelerated,
-  );
 }
 
 export function evalDatatypeVersion(ctx: DeploymentContext): CheckResult {

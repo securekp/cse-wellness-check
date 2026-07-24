@@ -170,14 +170,6 @@ export interface WorkerProcess {
 
 // --- Cribl Search shapes (only the fields we read) ------------------------
 
-// Dataset metadata block controls acceleration (backfill + refresh of stats).
-export interface DatasetMetadata {
-  enableAcceleration?: boolean;
-  scanMode?: 'quick' | 'detailed';
-  earliest?: string;
-  fieldList?: string[];
-}
-
 export interface SearchDataset {
   id: string;
   // Discriminator: s3, gcs, azure_blob, amazon_security_lake, cribl_lake,
@@ -194,7 +186,6 @@ export interface SearchDataset {
   // Datatype associations (v1 datasets reference datatypes for parsing).
   datatypes?: string[];
   breakerRulesets?: unknown[];
-  metadata?: DatasetMetadata;
   [key: string]: unknown;
 }
 
